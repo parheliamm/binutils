@@ -1,6 +1,6 @@
 /* AArch64 assembler/disassembler support.
 
-   Copyright (C) 2009-2018 Free Software Foundation, Inc.
+   Copyright (C) 2009-2019 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GNU Binutils.
@@ -62,6 +62,31 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_COMPNUM	0x40000000	/* Complex # instructions.  */
 #define AARCH64_FEATURE_DOTPROD 0x080000000     /* Dot Product instructions.  */
 #define AARCH64_FEATURE_F16_FML	0x1000000000ULL	/* v8.2 FP16FML ins.  */
+#define AARCH64_FEATURE_V8_5	0x2000000000ULL	/* ARMv8.5 processors.  */
+
+/* Flag Manipulation insns.  */
+#define AARCH64_FEATURE_FLAGMANIP	0x4000000000ULL
+/* FRINT[32,64][Z,X] insns.  */
+#define AARCH64_FEATURE_FRINTTS		0x8000000000ULL
+/* SB instruction.  */
+#define AARCH64_FEATURE_SB		0x10000000000ULL
+/* Execution and Data Prediction Restriction instructions.  */
+#define AARCH64_FEATURE_PREDRES		0x20000000000ULL
+/* DC CVADP.  */
+#define AARCH64_FEATURE_CVADP		0x40000000000ULL
+/* Random Number instructions.  */
+#define AARCH64_FEATURE_RNG		0x80000000000ULL
+/* BTI instructions.  */
+#define AARCH64_FEATURE_BTI		0x100000000000ULL
+/* SCXTNUM_ELx.  */
+#define AARCH64_FEATURE_SCXTNUM		0x200000000000ULL
+/* ID_PFR2 instructions.  */
+#define AARCH64_FEATURE_ID_PFR2		0x400000000000ULL
+/* SSBS mechanism enabled.  */
+#define AARCH64_FEATURE_SSBS		0x800000000000ULL
+/* Memory Tagging Extension.  */
+#define AARCH64_FEATURE_MEMTAG		0x1000000000000ULL
+
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8		AARCH64_FEATURE (AARCH64_FEATURE_V8, \
@@ -85,6 +110,18 @@ typedef uint32_t aarch64_insn;
 						 AARCH64_FEATURE_V8_4   \
 						 | AARCH64_FEATURE_DOTPROD \
 						 | AARCH64_FEATURE_F16_FML)
+#define AARCH64_ARCH_V8_5	AARCH64_FEATURE (AARCH64_ARCH_V8_4,	\
+						 AARCH64_FEATURE_V8_5   \
+						 | AARCH64_FEATURE_FLAGMANIP \
+						 | AARCH64_FEATURE_FRINTTS \
+						 | AARCH64_FEATURE_SB   \
+						 | AARCH64_FEATURE_PREDRES \
+						 | AARCH64_FEATURE_CVADP \
+						 | AARCH64_FEATURE_BTI	\
+						 | AARCH64_FEATURE_SCXTNUM \
+						 | AARCH64_FEATURE_ID_PFR2 \
+						 | AARCH64_FEATURE_SSBS)
+
 
 #define AARCH64_ARCH_NONE	AARCH64_FEATURE (0, 0)
 #define AARCH64_ANY		AARCH64_FEATURE (-1, 0)	/* Any basic core.  */
@@ -178,6 +215,8 @@ enum aarch64_opnd
   AARCH64_OPND_Ed,	/* AdvSIMD Vector Element Vd.  */
   AARCH64_OPND_En,	/* AdvSIMD Vector Element Vn.  */
   AARCH64_OPND_Em,	/* AdvSIMD Vector Element Vm.  */
+  AARCH64_OPND_Em16,	/* AdvSIMD Vector Element Vm restricted to V0 - V15 when
+			   qualifier is S_H.  */
   AARCH64_OPND_LVn,	/* AdvSIMD Vector register list used in e.g. TBL.  */
   AARCH64_OPND_LVt,	/* AdvSIMD Vector register list used in ld/st.  */
   AARCH64_OPND_LVt_AL,	/* AdvSIMD Vector register list for loading single
@@ -207,7 +246,9 @@ enum aarch64_opnd
   AARCH64_OPND_UIMM3_OP1,/* Unsigned 3-bit immediate in the op1 field.  */
   AARCH64_OPND_UIMM3_OP2,/* Unsigned 3-bit immediate in the op2 field.  */
   AARCH64_OPND_UIMM4,	/* Unsigned 4-bit immediate in the CRm field.  */
+  AARCH64_OPND_UIMM4_ADDG,/* Unsigned 4-bit immediate in addg/subg.  */
   AARCH64_OPND_UIMM7,	/* Unsigned 7-bit immediate in the CRm:op2 fields.  */
+  AARCH64_OPND_UIMM10,	/* Unsigned 10-bit immediate in addg/subg.  */
   AARCH64_OPND_BIT_NUM,	/* Immediate.  */
   AARCH64_OPND_EXCEPTION,/* imm16 operand in exception instructions.  */
   AARCH64_OPND_CCMP_IMM,/* Immediate in conditional compare instructions.  */
@@ -245,7 +286,11 @@ enum aarch64_opnd
 				   the mnemonic name for LDUR/STUR instructions
 				   wherever there is no ambiguity.  */
   AARCH64_OPND_ADDR_SIMM10,	/* Address of signed 10-bit immediate.  */
+  AARCH64_OPND_ADDR_SIMM11,	/* Address with a signed 11-bit (multiple of
+				   16) immediate.  */
   AARCH64_OPND_ADDR_UIMM12,	/* Address of unsigned 12-bit immediate.  */
+  AARCH64_OPND_ADDR_SIMM13,	/* Address with a signed 13-bit (multiple of
+				   16) immediate.  */
   AARCH64_OPND_SIMD_ADDR_SIMPLE,/* Address of ld/st multiple structures.  */
   AARCH64_OPND_ADDR_OFFSET,     /* Address with an optional 9-bit immediate.  */
   AARCH64_OPND_SIMD_ADDR_POST,	/* Address of ld/st multiple post-indexed.  */
@@ -256,10 +301,12 @@ enum aarch64_opnd
   AARCH64_OPND_SYSREG_DC,	/* System register <dc_op> operand.  */
   AARCH64_OPND_SYSREG_IC,	/* System register <ic_op> operand.  */
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
+  AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_ISB,	/* Barrier operand for ISB.  */
   AARCH64_OPND_PRFOP,		/* Prefetch operation.  */
   AARCH64_OPND_BARRIER_PSB,	/* Barrier operand for PSB.  */
+  AARCH64_OPND_BTI_TARGET,	/* BTI {<target>}.  */
 
   AARCH64_OPND_SVE_ADDR_RI_S4x16,   /* SVE [<Xn|SP>, #<simm4>*16].  */
   AARCH64_OPND_SVE_ADDR_RI_S4xVL,   /* SVE [<Xn|SP>, #<simm4>, MUL VL].  */
@@ -272,6 +319,7 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ADDR_RI_U6x2,    /* SVE [<Xn|SP>, #<uimm6>*2].  */
   AARCH64_OPND_SVE_ADDR_RI_U6x4,    /* SVE [<Xn|SP>, #<uimm6>*4].  */
   AARCH64_OPND_SVE_ADDR_RI_U6x8,    /* SVE [<Xn|SP>, #<uimm6>*8].  */
+  AARCH64_OPND_SVE_ADDR_R,	    /* SVE [<Xn|SP>].  */
   AARCH64_OPND_SVE_ADDR_RR,	    /* SVE [<Xn|SP>, <Xm|XZR>].  */
   AARCH64_OPND_SVE_ADDR_RR_LSL1,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #1].  */
   AARCH64_OPND_SVE_ADDR_RR_LSL2,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #2].  */
@@ -422,6 +470,10 @@ enum aarch64_opnd_qualifier
 
   AARCH64_OPND_QLF_P_Z,
   AARCH64_OPND_QLF_P_M,
+
+  /* Used in scaled signed immediate that are scaled by a Tag granule
+     like in stg, st2g, etc.   */
+  AARCH64_OPND_QLF_imm_tag,
 
   /* Constraint on value.  */
   AARCH64_OPND_QLF_CR,		/* CRn, CRm. */
@@ -638,6 +690,17 @@ enum aarch64_op
   OP_TOTAL_NUM,		/* Pseudo.  */
 };
 
+/* Error types.  */
+enum err_type
+{
+  ERR_OK,
+  ERR_UND,
+  ERR_UNP,
+  ERR_NYI,
+  ERR_VFI,
+  ERR_NR_ENTRIES
+};
+
 /* Maximum number of operands an instruction can have.  */
 #define AARCH64_MAX_OPND_NUM 6
 /* Maximum number of qualifier sequences an instruction can have.  */
@@ -658,6 +721,13 @@ empty_qualifier_sequence_p (const aarch64_opnd_qualifier_t *qualifiers)
       return FALSE;
   return TRUE;
 }
+
+/*  Forward declare error reporting type.  */
+typedef struct aarch64_operand_error aarch64_operand_error;
+/* Forward declare instruction sequence type.  */
+typedef struct aarch64_instr_sequence aarch64_instr_sequence;
+/* Forward declare instruction definition.  */
+typedef struct aarch64_inst aarch64_inst;
 
 /* This structure holds information for a particular opcode.  */
 
@@ -697,14 +767,19 @@ struct aarch64_opcode
   aarch64_opnd_qualifier_seq_t qualifiers_list[AARCH64_MAX_QLF_SEQ_NUM];
 
   /* Flags providing information about this instruction */
-  uint32_t flags;
+  uint64_t flags;
+
+  /* Extra constraints on the instruction that the verifier checks.  */
+  uint32_t constraints;
 
   /* If nonzero, this operand and operand 0 are both registers and
      are required to have the same register number.  */
   unsigned char tied_operand;
 
   /* If non-NULL, a function to verify that a given instruction is valid.  */
-  bfd_boolean (* verifier) (const struct aarch64_opcode *, const aarch64_insn);
+  enum err_type (* verifier) (const struct aarch64_inst *, const aarch64_insn,
+			      bfd_vma, bfd_boolean, aarch64_operand_error *,
+			      struct aarch64_instr_sequence *);
 };
 
 typedef struct aarch64_opcode aarch64_opcode;
@@ -764,7 +839,22 @@ extern aarch64_opcode aarch64_opcode_table[];
 #define F_LSE_SZ (1 << 27)
 /* Require an exact qualifier match, even for NIL qualifiers.  */
 #define F_STRICT (1ULL << 28)
-/* Next bit is 29.  */
+/* This system instruction is used to read system registers.  */
+#define F_SYS_READ (1ULL << 29)
+/* This system instruction is used to write system registers.  */
+#define F_SYS_WRITE (1ULL << 30)
+/* This instruction has an extra constraint on it that imposes a requirement on
+   subsequent instructions.  */
+#define F_SCAN (1ULL << 31)
+/* Next bit is 32.  */
+
+/* Instruction constraints.  */
+/* This instruction has a predication constraint on the instruction at PC+4.  */
+#define C_SCAN_MOVPRFX (1U << 0)
+/* This instruction's operation width is determined by the operand with the
+   largest element size.  */
+#define C_MAX_ELEM (1U << 1)
+/* Next bit is 2.  */
 
 static inline bfd_boolean
 alias_opcode_p (const aarch64_opcode *opcode)
@@ -860,6 +950,7 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_ic [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
+extern const aarch64_sys_ins_reg aarch64_sys_regs_sr [];
 
 /* Shift/extending operator kinds.
    N.B. order is important; keep aarch64_operand_modifiers synced.  */
@@ -956,9 +1047,17 @@ struct aarch64_opnd_info
 	  unsigned preind : 1;		/* Pre-indexed.  */
 	  unsigned postind : 1;		/* Post-indexed.  */
 	} addr;
+
+      struct
+	{
+	  /* The encoding of the system register.  */
+	  aarch64_insn value;
+
+	  /* The system register flags.  */
+	  uint32_t flags;
+	} sysreg;
+
       const aarch64_cond *cond;
-      /* The encoding of the system register.  */
-      aarch64_insn sysreg;
       /* The encoding of the PSTATE field.  */
       aarch64_insn pstatefield;
       const aarch64_sys_ins_reg *sysins_op;
@@ -1017,7 +1116,13 @@ struct aarch64_inst
   aarch64_opnd_info operands[AARCH64_MAX_OPND_NUM];
 };
 
-typedef struct aarch64_inst aarch64_inst;
+/* Defining the HINT #imm values for the aarch64_hint_options.  */
+#define HINT_OPD_CSYNC	0x11
+#define HINT_OPD_C	0x22
+#define HINT_OPD_J	0x24
+#define HINT_OPD_JC	0x26
+#define HINT_OPD_NULL	0x00
+
 
 /* Diagnosis related declaration and interface.  */
 
@@ -1092,16 +1197,30 @@ struct aarch64_operand_error
   int index;
   const char *error;
   int data[3];	/* Some data for extra information.  */
+  bfd_boolean non_fatal;
 };
 
-typedef struct aarch64_operand_error aarch64_operand_error;
+/* AArch64 sequence structure used to track instructions with F_SCAN
+   dependencies for both assembler and disassembler.  */
+struct aarch64_instr_sequence
+{
+  /* The instruction that caused this sequence to be opened.  */
+  aarch64_inst *instr;
+  /* The number of instructions the above instruction allows to be kept in the
+     sequence before an automatic close is done.  */
+  int num_insns;
+  /* The instructions currently added to the sequence.  */
+  aarch64_inst **current_insns;
+  /* The number of instructions already in the sequence.  */
+  int next_insn;
+};
 
 /* Encoding entrypoint.  */
 
 extern int
 aarch64_opcode_encode (const aarch64_opcode *, const aarch64_inst *,
 		       aarch64_insn *, aarch64_opnd_qualifier_t *,
-		       aarch64_operand_error *);
+		       aarch64_operand_error *, aarch64_instr_sequence *);
 
 extern const aarch64_opcode *
 aarch64_replace_opcode (struct aarch64_inst *,
@@ -1116,7 +1235,8 @@ aarch64_get_opcode (enum aarch64_op);
 /* Generate the string representation of an operand.  */
 extern void
 aarch64_print_operand (char *, size_t, bfd_vma, const aarch64_opcode *,
-		       const aarch64_opnd_info *, int, int *, bfd_vma *);
+		       const aarch64_opnd_info *, int, int *, bfd_vma *,
+		       char **);
 
 /* Miscellaneous interface.  */
 
@@ -1127,6 +1247,9 @@ extern aarch64_opnd_qualifier_t
 aarch64_get_expected_qualifier (const aarch64_opnd_qualifier_seq_t *, int,
 				const aarch64_opnd_qualifier_t, int);
 
+extern bfd_boolean
+aarch64_is_destructive_by_operands (const aarch64_opcode *);
+
 extern int
 aarch64_num_of_operands (const aarch64_opcode *);
 
@@ -1136,8 +1259,12 @@ aarch64_stack_pointer_p (const aarch64_opnd_info *);
 extern int
 aarch64_zero_register_p (const aarch64_opnd_info *);
 
-extern int
-aarch64_decode_insn (aarch64_insn, aarch64_inst *, bfd_boolean);
+extern enum err_type
+aarch64_decode_insn (aarch64_insn, aarch64_inst *, bfd_boolean,
+		     aarch64_operand_error *);
+
+extern void
+init_insn_sequence (const struct aarch64_inst *, aarch64_instr_sequence *);
 
 /* Given an operand qualifier, return the expected data element size
    of a qualified operand.  */

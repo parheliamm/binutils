@@ -1,134 +1,137 @@
-2018-03-19  H.J. Lu  <hongjiu.lu@intel.com>
+2019-02-02  Nick Clifton  <nickc@redhat.com>
 
-	Backport from master branch
-	2018-02-13  Alan Modra  <amodra@gmail.com>
-
-	PR 22836
-	* testsuite/binutils-all/group-7.s,
-	* testsuite/binutils-all/group-7a.d,
-	* testsuite/binutils-all/group-7b.d,
-	* testsuite/binutils-all/group-7c.d: New tests.
-	* testsuite/binutils-all/objcopy.exp: Run them.
-
-2018-02-27  Nick Clifton  <nickc@redhat.com>
-
-	* po/pt.po: New Portuguese translation.
-	* configure.ac (ALL_LINGUAS): Add pt.
+	2.32 Release
 	* configure: Regenerate.
 
-2018-01-27  Nick Clifton  <nickc@redhat.com>
-
-	Back to development.
-
-	* configure: Regenerate.
-
-2018-01-27  Nick Clifton  <nickc@redhat.com>
-
-	This is the 2.30 release:
-
-	* configure: Regenerate.
-
-2018-01-23  Nick Clifton  <nickc@redhat.com>
-
-	* configure: Regenerate.
-
-2018-01-22  Maciej W. Rozycki  <macro@mips.com>
-
-	* doc/binutils.texi (objcopy): Fix a typo in `--rename-section'
-	option description.
-
-2018-01-22  Maciej W. Rozycki  <macro@mips.com>
-
-	* MAINTAINERS: Update my company e-mail address.
-
-2018-01-22  Nick Clifton  <nickc@redhat.com>
-
-	* po/sv.po: Updated Swedish translation.
-
-2018-01-18  Nick Clifton  <nickc@redhat.com>
+2019-01-25  Nick Clifton  <nickc@redhat.com>
 
 	* po/bg.po: Updated Bulgarian translation.
 
-2018-01-16  Nick Clifton  <nickc@redhat.com>
+2019-01-23  Nick Clifton  <nickc@redhat.com>
 
 	* po/fr.po: Updated French translation.
+	* po/pt.po: Updated Portuguese translation.
 
-2018-01-15  Nick Clifton  <nickc@redhat.com>
+2019-01-21  Nick Clifton  <nickc@redhat.com>
 
 	* po/uk.po: Updated Ukranian translation.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2019-01-19  Nick Clifton  <nickc@redhat.com>
 
-	* po/binutils.pot: Regenerate.
+	* configure: Regenerate.
+	* binutils/po/binutils.pot.
+
+2018-06-24  Nick Clifton  <nickc@redhat.com>
+
+	2.32 branch created.
+
+2019-01-17  Nick Clifton  <nickc@redhat.com>
+
+	* objdump.c (disassemble_section): When disassembling from a
+	symbol only stop at the next symbol if the original symbol was not
+	a function symbol.  Otherwise continue disassembling until a new
+	function is reached.
+	* testsuite/binutils-all/objdump.exp: Add tests of extended
+	functionality.
+	* testsuite/binutils-all/disasm.s: New test source file.
+
+2019-01-16  Kito Cheng  <kito@andestech.com>
+	    Nelson Chu  <nelson@andestech.com>
+
+	* readelf.c (get_riscv_section_type_name): New function.
+	(get_section_type_name): Add handler for RISC-V.
+	(riscv_attr_tag_t): Declare.
+	(riscv_attr_tag): New.
+	(display_riscv_attribute): New function.
+	(process_attributes): Add handler for RISC-V.
+	* testsuite/binutils-all/strip-3.d: Remove .riscv.attribute
+	section.
+
+2019-01-10  Nick Clifton  <nickc@redhat.com>
+
+	PR 23963
+	* objdump.c (sanitize_string): New function.  Removes control
+	characters from symbol names.
+	(dump_section_header): Use new function.
+	(objdump_print_symname): Likewise.
+	(objdump_print_addr_with_sym): Likewise.
+	(show_line): Likewise.
+	(disassemble_bytes): Likewise.
+	(disassemble_section): Likewise.
+	(load_specific_debug_section): Likewise.
+	(read_section_stabs): Likewise.
+	(print_section_stabs): Likewise.
+	(dump_section): Likewise.
+	(dump_reloc_set): Likewise.
+	(dump_relocs_in_section): Likewise.
+	(dump_bfd): Likewise.
+	(display_any_bfd): Likewise.
+
+2019-01-09  Nick Clifton  <nickc@redhat.com>
+
+	PR 24049
+	* readelf.c (process_archive): Use arch.file_name in error
+	messages until the qualified name is available.
+
+2019-01-09  Andrew Paprocki  <andrew@ishiboo.com>
+
 	* configure: Regenerate.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2019-01-09  Alan Modra  <amodra@gmail.com>
 
-	2.30 branch created.
-	* NEWS: Add marker for 2.30.
+	* testsuite/binutils-all/cxxfilt.exp: Pass --no-strip-underscores
+	unconditionally to tests needing the option rather than via a
+	list of targets.
 
-2018-01-12  Nick Clifton  <nickc@redhat.com>
+2019-01-08  Nick Clifton  <nickc@redhat.com>
 
-	* README-how-to-make-a-release: Add notes on how to make the
-	branch and prelease snapshot.
-	* BRANCHES: Add binutils-2_29-branch.
+	PR 24044
+	* cxxfilt.c (hp_symbol_characters): Delete.
+	(main): Remove depcreated demangling styles.
+	* stabs.c (parse_stab_argtypes): Remove support for old gnu v2
+	demangling opnames.
+	* testsuite/binutils-all/cxxfilt.exp: Use the
+	--no-strip-underscore option for targets that do prefix their
+	symbols with underscores.
+	Update tests to eliminate those that use gnu v2 encoding.
 
-2018-01-10  Nick Clifton  <nickc@redhat.com>
+2019-01-08  Tamar Christina  <tamar.christina@arm.com>
 
-	* MAINTAINERS: Note that it is now the configure.ac file and not
-	the configure.in file that needs to be kept in sync with gcc.
-	Add a note about sending patches for libiberty to gcc.
+	PR 24065
+	* testsuite/binutils-all/copy-6.d: New test.
+	* testsuite/binutils-all/objcopy.exp: Use it.
 
-2018-01-03  Nick Clifton  <nickc@redhat.com>
+2019-01-08  Alan Modra  <amodra@gmail.com>
 
-	* objcopy.c (merge_gnu_build_notes): Add cast to maximum address
-	constants.
+	* testsuite/lib/binutils-common.exp (run_dump_test): Don't prepend
+	$srcdir/$subdir to source file name if it starts with "./".
 
-2018-01-03  Nick Clifton  <nickc@redhat.com>
+2019-01-05  Yoshinori Sato <ysato@users.sourceforge.jp>
 
-	* objcopy.c (objcopy_internal_note): New structure.
-	(gap_exists): New function.
-	(is_open_note): New function.
-	(is_func_note): New function.
-	(is_64bit): New function.
-	(merge_gnu_build_notes): Handle v3 notes.  Do not merge
-	if there are relocations against the notes.
-	* readelf.c (get_note_type): Use short names for build attribute
-	notes.
-	(print_symbol_for_build_attribute): Rename to
-	get_symbol_for_build_attribute.  Returns the found symbol rather
-	than printing it.
-	(print_gnu_build_attribute_description): Maintain address ranges
-	for function notes as well as global notes.  Handle v3 notes.
-	(print_gnu_build_attribute_name): Use more space for printing the
-	name in wide mode.
-	* testsuite/binutils-all/note-2-32.s: Use .dc.l instead of .word.
-	Eliminate symbol references in order to remove the need for
-	relocations.
-	* testsuite/binutils-all/note-2-64.s: Likewise.
-	* testsuite/binutils-all/note-3-32.s: Add a size to the note_1
-	symbol.
-	* testsuite/binutils-all/note-3-64.s: Likewise.
-	* testsuite/binutils-all/mips/mips-note-2r-n32.d: Update expected
-	output.
-	* testsuite/binutils-all/mips/mips-note-2r-n64.d: Likewise.
-	* testsuite/binutils-all/mips/mips-note-2r.d: Likewise.
-	* testsuite/binutils-all/note-2-32.d: Likewise.
-	* testsuite/binutils-all/note-2-64.d: Likewise.
-	* testsuite/binutils-all/note-3-32.d: Likewise.
-	* testsuite/binutils-all/note-3-64.d: Likewise.
-	* testsuite/binutils-all/note-4-64.s: New test.  Checks v3 notes.
-	* testsuite/binutils-all/note-4-32.s: New test.
-	* testsuite/binutils-all/note-4-64.d: New test result file.
-	* testsuite/binutils-all/note-4-32.d: New test result file.
+	* readelf.c (get_machine_flags): Add RXv3 output.
 
-2018-01-03  Alan Modra  <amodra@gmail.com>
+2019-01-04  Nick Clifton  <nickc@redhat.com>
+
+	PR 24005
+	* objdump.c (load_specific_debug_section): Check for integer
+	overflow before attempting to allocate contents.
+
+2019-01-04  Nick Clifton  <nickc@redhat.com>
+
+	PR 24001
+	* objcopy.c (copy_object): Free dhandle after writing out the
+	debug information.
+	* objdump.c (dump_bfd): Free dhandle after printing out the debug
+	information.
+
+
+2019-01-01  Alan Modra  <amodra@gmail.com>
 
 	Update year range in copyright notice of all files.
 
-For older changes see ChangeLog-2017
+For older changes see ChangeLog-2018
 
-Copyright (C) 2018 Free Software Foundation, Inc.
+Copyright (C) 2019 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

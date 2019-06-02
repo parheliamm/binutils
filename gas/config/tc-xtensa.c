@@ -1,5 +1,5 @@
 /* tc-xtensa.c -- Assemble Xtensa instructions.
-   Copyright (C) 2003-2018 Free Software Foundation, Inc.
+   Copyright (C) 2003-2019 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -27,7 +27,6 @@
 #include "xtensa-relax.h"
 #include "dwarf2dbg.h"
 #include "xtensa-istack.h"
-#include "struc-symbol.h"
 #include "xtensa-config.h"
 #include "elf/xtensa.h"
 
@@ -438,6 +437,7 @@ struct litpool_frag
   addressT addr;
   short priority; /* 1, 2, or 3 -- 1 is highest  */
   short original_priority;
+  int literal_count;
 };
 
 /* Map a segment to its litpool_frag list.  */
@@ -451,6 +451,14 @@ struct litpool_seg
 
 static struct litpool_seg litpool_seg_list;
 
+/* Limit maximal size of auto litpool by half of the j range.  */
+#define MAX_AUTO_POOL_LITERALS 16384
+
+/* Limit maximal size of explicit literal pool by l32r range.  */
+#define MAX_EXPLICIT_POOL_LITERALS 65536
+
+#define MAX_POOL_LITERALS \
+  (auto_litpools ? MAX_AUTO_POOL_LITERALS : MAX_EXPLICIT_POOL_LITERALS)
 
 /* Directive functions.  */
 
@@ -488,7 +496,7 @@ static int init_trampoline_frag (fragS *);
 static fixS *xg_append_jump (fragS *fragP, symbolS *sym, offsetT offset);
 static void xtensa_maybe_create_literal_pool_frag (bfd_boolean, bfd_boolean);
 static bfd_boolean auto_litpools = FALSE;
-static int auto_litpool_limit = 10000;
+static int auto_litpool_limit = 0;
 
 /* Alignment Functions.  */
 
@@ -628,6 +636,9 @@ static bfd_boolean enforce_three_byte_loop_align = FALSE;
 
 static bfd_boolean workaround_all_short_loops = FALSE;
 
+/* Generate individual property section for every section.
+   This option is defined in BDF library.  */
+extern bfd_boolean elf32xtensa_separate_props;
 
 static void
 xtensa_setup_hw_workarounds (int earliest, int latest)
@@ -713,6 +724,9 @@ enum
   option_auto_litpools,
   option_no_auto_litpools,
   option_auto_litpool_limit,
+
+  option_separate_props,
+  option_no_separate_props,
 };
 
 const char *md_shortopts = "";
@@ -791,6 +805,8 @@ struct option md_longopts[] =
   { "auto-litpools", no_argument, NULL, option_auto_litpools },
   { "no-auto-litpools", no_argument, NULL, option_no_auto_litpools },
   { "auto-litpool-limit", required_argument, NULL, option_auto_litpool_limit },
+
+  { "separate-prop-tables", no_argument, NULL, option_separate_props },
 
   { NULL, no_argument, NULL, 0 }
 };
@@ -984,6 +1000,8 @@ md_parse_option (int c, const char *arg)
     case option_auto_litpools:
       auto_litpools = TRUE;
       use_literal_section = FALSE;
+      if (auto_litpool_limit <= 0)
+	auto_litpool_limit = MAX_AUTO_POOL_LITERALS / 2;
       return 1;
 
     case option_no_auto_litpools:
@@ -1009,6 +1027,14 @@ md_parse_option (int c, const char *arg)
 	use_literal_section = FALSE;
 	return 1;
       }
+
+    case option_separate_props:
+      elf32xtensa_separate_props = TRUE;
+      return 1;
+
+    case option_no_separate_props:
+      elf32xtensa_separate_props = FALSE;
+      return 1;
 
     default:
       return 0;
@@ -1040,7 +1066,11 @@ Xtensa options:\n\
   --auto-litpool-limit=<value>\n\
                           (range 100-10000) Maximum number of blocks of\n\
                           instructions to emit between literal pool\n\
-                          locations; implies --auto-litpools flag\n", stream);
+                          locations; implies --auto-litpools flag\n\
+  --[no-]separate-prop-tables\n\
+                          [Do not] place Xtensa property records into\n\
+                          individual property sections for each section.\n\
+                          Default is to generate single property section.\n", stream);
 }
 
 
@@ -5989,6 +6019,12 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  val = *valP;
 	  fixP->fx_done = 1;
 	}
+      else if (S_GET_SEGMENT (fixP->fx_addsy) == absolute_section)
+	{
+	  val = S_GET_VALUE (fixP->fx_addsy) + fixP->fx_offset;
+	  *valP = val;
+	  fixP->fx_done = 1;
+	}
       /* fall through */
 
     case BFD_RELOC_XTENSA_PLT:
@@ -7184,10 +7220,8 @@ xg_assemble_vliw_tokens (vliw_insn *vinsn)
       frag_now->tc_frag_data.slot_offsets[slot] = tinsn->offset;
       frag_now->tc_frag_data.literal_frags[slot] = tinsn->literal_frag;
       if (tinsn->opcode == xtensa_l32r_opcode)
-	{
-	  frag_now->tc_frag_data.literal_frags[slot] =
-		  tinsn->tok[1].X_add_symbol->sy_frag;
-	}
+	frag_now->tc_frag_data.literal_frags[slot]
+	  = symbol_get_frag (tinsn->tok[1].X_add_symbol);
       if (tinsn->literal_space != 0)
 	xg_assemble_literal_space (tinsn->literal_space, slot);
       frag_now->tc_frag_data.free_reg[slot] = tinsn->extra_arg;
@@ -7652,14 +7686,15 @@ static int xg_order_trampoline_chain (const void *a, const void *b)
   const struct trampoline_chain_entry *pb = &_pb->target;
   symbolS *s1 = pa->sym;
   symbolS *s2 = pb->sym;
+  symbolS *tmp;
 
-  if (s1->sy_flags.sy_local_symbol
-      && local_symbol_converted_p ((struct local_symbol *) s1))
-    s1 = local_symbol_get_real_symbol ((struct local_symbol *) s1);
+  tmp = symbol_symbolS (s1);
+  if (tmp)
+    s1 = tmp;
 
-  if (s2->sy_flags.sy_local_symbol
-      && local_symbol_converted_p ((struct local_symbol *) s2))
-    s2 = local_symbol_get_real_symbol ((struct local_symbol *) s2);
+  tmp = symbol_symbolS (s2);
+  if (tmp)
+    s2 = tmp;
 
   if (s1 == s2)
     if (pa->offset == pb->offset)
@@ -7912,6 +7947,7 @@ xtensa_maybe_create_literal_pool_frag (bfd_boolean create,
   lpf->fragP = fragP;
   lpf->priority = (needed) ? (only_if_needed) ? 3 : 2 : 1;
   lpf->original_priority = lpf->priority;
+  lpf->literal_count = 0;
 
   lps->frag_count = 0;
 }
@@ -11188,6 +11224,74 @@ xg_promote_candidate_litpool (struct litpool_seg *lps,
   /* Rest is done in xtensa_relax_frag.  */
 }
 
+static struct litpool_frag *xg_find_litpool (struct litpool_seg *lps,
+					     struct litpool_frag *lpf,
+					     addressT addr)
+{
+  struct litpool_frag *lp = lpf->prev;
+
+  gas_assert (lp->fragP);
+
+  while (lp->fragP->fr_subtype == RELAX_LITERAL_POOL_CANDIDATE_BEGIN)
+    {
+      lp = lp->prev;
+      if (lp->fragP == NULL)
+	{
+	  /* End of list; have to bite the bullet.
+	     Take the nearest.  */
+	  lp = lpf->prev;
+	  break;
+	}
+      /* Does it (conservatively) reach?  */
+      if (addr - lp->addr <= 128 * 1024)
+	{
+	  if (lp->fragP->fr_subtype == RELAX_LITERAL_POOL_BEGIN &&
+	      lp->literal_count < MAX_POOL_LITERALS)
+	    {
+	      /* Found a good one.  */
+	      break;
+	    }
+	  else if (lp->prev->fragP &&
+		   addr - lp->prev->addr > 128 * 1024 &&
+		   lp->prev->literal_count < MAX_POOL_LITERALS)
+	    {
+	      /* This is still a "candidate" but the next one
+		 will be too far away, so revert to the nearest
+		 one, convert it and add the jump around.  */
+	      lp = lpf->prev;
+	      break;
+	    }
+	}
+    }
+
+  if (lp->literal_count >= MAX_POOL_LITERALS)
+    {
+      lp = lpf->prev;
+      while (lp && lp->fragP && lp->literal_count >= MAX_POOL_LITERALS)
+	{
+	  lp = lp->prev;
+	}
+      gas_assert (lp);
+    }
+
+  gas_assert (lp && lp->fragP && lp->literal_count < MAX_POOL_LITERALS);
+  ++lp->literal_count;
+
+  /* Convert candidate and add the jump around.  */
+  if (lp->fragP->fr_subtype == RELAX_LITERAL_POOL_CANDIDATE_BEGIN)
+    xg_promote_candidate_litpool (lps, lp);
+
+  return lp;
+}
+
+static bfd_boolean xtensa_is_init_fini (segT seg)
+{
+  if (!seg)
+    return 0;
+  return strcmp (segment_name (seg), INIT_SECTION_NAME) == 0
+    || strcmp (segment_name (seg), FINI_SECTION_NAME) == 0;
+}
+
 static void
 xtensa_move_literals (void)
 {
@@ -11219,6 +11323,9 @@ xtensa_move_literals (void)
       struct litpool_frag *lpf = lps->frag_list.next;
       addressT addr = 0;
 
+      if (xtensa_is_init_fini (lps->seg))
+	continue;
+
       for ( ; frchP; frchP = frchP->frch_next)
 	{
 	  fragS *fragP;
@@ -11239,59 +11346,23 @@ xtensa_move_literals (void)
 		  int slot;
 		  for (slot = 0; slot < MAX_SLOTS; slot++)
 		    {
-		      if (fragP->tc_frag_data.literal_frags[slot])
+		      fragS *litfrag = fragP->tc_frag_data.literal_frags[slot];
+
+		      if (litfrag
+			  && litfrag->tc_frag_data.is_literal
+			  && !litfrag->tc_frag_data.literal_frag)
 			{
-			  /* L32R; point its literal to the nearest litpool
-			     preferring non-"candidate" positions to avoid
-			     the jump-around.  */
-			  fragS *litfrag = fragP->tc_frag_data.literal_frags[slot];
-			  struct litpool_frag *lp = lpf->prev;
-			  if (!lp->fragP)
-			    {
-			      break;
-			    }
-			  while (lp->fragP->fr_subtype ==
-				 RELAX_LITERAL_POOL_CANDIDATE_BEGIN)
-			    {
-			      lp = lp->prev;
-			      if (lp->fragP == NULL)
-				{
-				  /* End of list; have to bite the bullet.
-				     Take the nearest.  */
-				  lp = lpf->prev;
-				  break;
-				}
-			      /* Does it (conservatively) reach?  */
-			      if (addr - lp->addr <= 128 * 1024)
-				{
-				  if (lp->fragP->fr_subtype == RELAX_LITERAL_POOL_BEGIN)
-				    {
-				      /* Found a good one.  */
-				      break;
-				    }
-				  else if (lp->prev->fragP &&
-					   addr - lp->prev->addr > 128 * 1024)
-				    {
-				      /* This is still a "candidate" but the next one
-				         will be too far away, so revert to the nearest
-					 one, convert it and add the jump around.  */
-				      lp = lpf->prev;
-				      break;
-				    }
-				}
-			    }
+			  /* L32R referring .literal or generated as a result
+			     of relaxation.  Point its literal to the nearest
+			     litpool preferring non-"candidate" positions to
+			     avoid the jump-around.  */
 
-			  /* Convert candidate and add the jump around.  */
-			  if (lp->fragP->fr_subtype ==
-			      RELAX_LITERAL_POOL_CANDIDATE_BEGIN)
-			    xg_promote_candidate_litpool (lps, lp);
+			  struct litpool_frag *lp;
 
-			  if (! litfrag->tc_frag_data.literal_frag)
-			    {
-			      /* Take earliest use of this literal to avoid
-				 forward refs.  */
-			      litfrag->tc_frag_data.literal_frag = lp->fragP;
-			    }
+			  lp = xg_find_litpool (lps, lpf, addr);
+			  /* Take earliest use of this literal to avoid
+			     forward refs.  */
+			  litfrag->tc_frag_data.literal_frag = lp->fragP;
 			}
 		    }
 		}
@@ -11559,14 +11630,11 @@ xtensa_switch_to_non_abs_literal_fragment (emit_state *result)
 {
   fragS *pool_location = get_literal_pool_location (now_seg);
   segT lit_seg;
-  bfd_boolean is_init =
-    (now_seg && !strcmp (segment_name (now_seg), INIT_SECTION_NAME));
-  bfd_boolean is_fini =
-    (now_seg && !strcmp (segment_name (now_seg), FINI_SECTION_NAME));
+  bfd_boolean is_init_fini = xtensa_is_init_fini (now_seg);
 
   if (pool_location == NULL
       && !use_literal_section
-      && !is_init && ! is_fini)
+      && !is_init_fini)
     {
       if (!auto_litpools)
 	{
@@ -11580,7 +11648,7 @@ xtensa_switch_to_non_abs_literal_fragment (emit_state *result)
   xtensa_switch_section_emit_state (result, lit_seg, 0);
 
   if (!use_literal_section
-      && !is_init && !is_fini
+      && !is_init_fini
       && get_literal_pool_location (now_seg) != pool_location)
     {
       /* Close whatever frag is there.  */

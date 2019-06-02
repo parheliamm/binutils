@@ -1,5 +1,5 @@
 /* tc-mips.c -- assemble code for a MIPS chip.
-   Copyright (C) 1993-2018 Free Software Foundation, Inc.
+   Copyright (C) 1993-2019 Free Software Foundation, Inc.
    Contributed by the OSF and Ralph Campbell.
    Written by Keith Knowles and Ralph Campbell, working independently.
    Modified for ECOFF and R4000 support by Ian Lance Taylor of Cygnus
@@ -422,7 +422,9 @@ static int mips_32bitmode = 0;
     || (ISA) == ISA_MIPS64R5		\
     || (ISA) == ISA_MIPS64R6		\
     || (CPU) == CPU_R5900)		\
-   && (CPU) != CPU_LOONGSON_3A)
+   && ((CPU) != CPU_GS464		\
+    || (CPU) != CPU_GS464E		\
+    || (CPU) != CPU_GS264E))
 
 /* Return true if ISA supports move to/from high part of a 64-bit
    floating-point register. */
@@ -936,6 +938,10 @@ static int mips_fix_rm7000;
 
 /* ...likewise -mfix-cn63xxp1 */
 static bfd_boolean mips_fix_cn63xxp1;
+
+/* ...likewise -mfix-r5900 */
+static bfd_boolean mips_fix_r5900;
+static bfd_boolean mips_fix_r5900_explicit;
 
 /* We don't relax branches by default, since this causes us to expand
    `la .l2 - .l1' if there's a branch between .l1 and .l2, because we
@@ -1460,7 +1466,8 @@ enum options
     OPTION_NO_MCU,
     OPTION_MIPS16E2,
     OPTION_NO_MIPS16E2,
-    OPTION_COMPAT_ARCH_BASE,
+    OPTION_CRC,
+    OPTION_NO_CRC,
     OPTION_M4650,
     OPTION_NO_M4650,
     OPTION_M4010,
@@ -1485,6 +1492,8 @@ enum options
     OPTION_NO_FIX_VR4130,
     OPTION_FIX_CN63XXP1,
     OPTION_NO_FIX_CN63XXP1,
+    OPTION_FIX_R5900,
+    OPTION_NO_FIX_R5900,
     OPTION_TRAP,
     OPTION_BREAK,
     OPTION_EB,
@@ -1526,6 +1535,16 @@ enum options
     OPTION_NAN,
     OPTION_ODD_SPREG,
     OPTION_NO_ODD_SPREG,
+    OPTION_GINV,
+    OPTION_NO_GINV,
+    OPTION_LOONGSON_MMI,
+    OPTION_NO_LOONGSON_MMI,
+    OPTION_LOONGSON_CAM,
+    OPTION_NO_LOONGSON_CAM,
+    OPTION_LOONGSON_EXT,
+    OPTION_NO_LOONGSON_EXT,
+    OPTION_LOONGSON_EXT2,
+    OPTION_NO_LOONGSON_EXT2,
     OPTION_END_OF_ENUM
   };
 
@@ -1582,6 +1601,18 @@ struct option md_longopts[] =
   {"mno-xpa", no_argument, NULL, OPTION_NO_XPA},
   {"mmips16e2", no_argument, NULL, OPTION_MIPS16E2},
   {"mno-mips16e2", no_argument, NULL, OPTION_NO_MIPS16E2},
+  {"mcrc", no_argument, NULL, OPTION_CRC},
+  {"mno-crc", no_argument, NULL, OPTION_NO_CRC},
+  {"mginv", no_argument, NULL, OPTION_GINV},
+  {"mno-ginv", no_argument, NULL, OPTION_NO_GINV},
+  {"mloongson-mmi", no_argument, NULL, OPTION_LOONGSON_MMI},
+  {"mno-loongson-mmi", no_argument, NULL, OPTION_NO_LOONGSON_MMI},
+  {"mloongson-cam", no_argument, NULL, OPTION_LOONGSON_CAM},
+  {"mno-loongson-cam", no_argument, NULL, OPTION_NO_LOONGSON_CAM},
+  {"mloongson-ext", no_argument, NULL, OPTION_LOONGSON_EXT},
+  {"mno-loongson-ext", no_argument, NULL, OPTION_NO_LOONGSON_EXT},
+  {"mloongson-ext2", no_argument, NULL, OPTION_LOONGSON_EXT2},
+  {"mno-loongson-ext2", no_argument, NULL, OPTION_NO_LOONGSON_EXT2},
 
   /* Old-style architecture options.  Don't add more of these.  */
   {"m4650", no_argument, NULL, OPTION_M4650},
@@ -1611,6 +1642,8 @@ struct option md_longopts[] =
   {"mno-fix-rm7000", no_argument, NULL, OPTION_NO_FIX_RM7000},
   {"mfix-cn63xxp1", no_argument, NULL, OPTION_FIX_CN63XXP1},
   {"mno-fix-cn63xxp1", no_argument, NULL, OPTION_NO_FIX_CN63XXP1},
+  {"mfix-r5900", no_argument, NULL, OPTION_FIX_R5900},
+  {"mno-fix-r5900", no_argument, NULL, OPTION_NO_FIX_R5900},
 
   /* Miscellaneous options.  */
   {"trap", no_argument, NULL, OPTION_TRAP},
@@ -1769,6 +1802,36 @@ static const struct mips_ase mips_ases[] = {
     OPTION_MIPS16E2, OPTION_NO_MIPS16E2,
     2,  2, -1, -1,
     6 },
+
+  { "crc", ASE_CRC, ASE_CRC64,
+    OPTION_CRC, OPTION_NO_CRC,
+    6,  6, -1, -1,
+    -1 },
+
+  { "ginv", ASE_GINV, 0,
+    OPTION_GINV, OPTION_NO_GINV,
+    6,  6, 6, 6,
+    -1 },
+
+  { "loongson-mmi", ASE_LOONGSON_MMI, 0,
+    OPTION_LOONGSON_MMI, OPTION_NO_LOONGSON_MMI,
+    0, 0, -1, -1,
+    -1 },
+
+  { "loongson-cam", ASE_LOONGSON_CAM, 0,
+    OPTION_LOONGSON_CAM, OPTION_NO_LOONGSON_CAM,
+    0, 0, -1, -1,
+    -1 },
+
+  { "loongson-ext", ASE_LOONGSON_EXT, 0,
+    OPTION_LOONGSON_EXT, OPTION_NO_LOONGSON_EXT,
+    0, 0, -1, -1,
+    -1 },
+
+  { "loongson-ext2", ASE_LOONGSON_EXT | ASE_LOONGSON_EXT2, 0,
+    OPTION_LOONGSON_EXT2, OPTION_NO_LOONGSON_EXT2,
+    0, 0, -1, -1,
+    -1 },
 };
 
 /* The set of ASEs that require -mfp64.  */
@@ -1776,7 +1839,8 @@ static const struct mips_ase mips_ases[] = {
 
 /* Groups of ASE_* flags that represent different revisions of an ASE.  */
 static const unsigned int mips_ase_groups[] = {
-  ASE_DSP | ASE_DSPR2 | ASE_DSPR3
+  ASE_DSP | ASE_DSPR2 | ASE_DSPR3, 
+  ASE_LOONGSON_EXT | ASE_LOONGSON_EXT2 
 };
 
 /* Pseudo-op table.
@@ -6926,10 +6990,22 @@ can_swap_branch_p (struct mips_cl_insn *ip, expressionS *address_expr,
       && insn_length (history) != 4)
     return FALSE;
 
-  /* On R5900 short loops need to be fixed by inserting a nop in
-     the branch delay slots.
-     A short loop can be terminated too early.  */
-  if (mips_opts.arch == CPU_R5900
+  /* On the R5900 short loops need to be fixed by inserting a NOP in the
+     branch delay slot.
+
+     The short loop bug under certain conditions causes loops to execute
+     only once or twice.  We must ensure that the assembler never
+     generates loops that satisfy all of the following conditions:
+
+     - a loop consists of less than or equal to six instructions
+       (including the branch delay slot);
+     - a loop contains only one conditional branch instruction at the end
+       of the loop;
+     - a loop does not contain any other branch or jump instructions;
+     - a branch delay slot of the loop is not NOP (EE 2.9 or later).
+
+     We need to do this because of a hardware bug in the R5900 chip.  */
+  if (mips_fix_r5900
       /* Check if instruction has a parameter, ignore "j $31". */
       && (address_expr != NULL)
       /* Parameter must be 16 bit. */
@@ -6946,8 +7022,8 @@ can_swap_branch_p (struct mips_cl_insn *ip, expressionS *address_expr,
 	|| (ip->insn_opcode & 0xffff0000) == 0x04110000)) /* bgezal $0 */
     {
       int distance;
-      /* Check if loop is shorter than 6 instructions including
-         branch and delay slot.  */
+      /* Check if loop is shorter than or equal to 6 instructions
+         including branch and delay slot.  */
       distance = frag_now_fix () - S_GET_VALUE (address_expr->X_add_symbol);
       if (distance <= 20)
         {
@@ -8834,7 +8910,26 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 		      || *r == BFD_RELOC_MIPS_HIGHER
 		      || *r == BFD_RELOC_HI16_S
 		      || *r == BFD_RELOC_LO16
-		      || *r == BFD_RELOC_MIPS_GOT_OFST);
+		      || *r == BFD_RELOC_MIPS_GOT_OFST
+		      || (mips_opts.micromips
+			  && (*r == BFD_RELOC_16
+			      || *r == BFD_RELOC_MIPS_GOT16
+			      || *r == BFD_RELOC_MIPS_CALL16
+			      || *r == BFD_RELOC_MIPS_GOT_HI16
+			      || *r == BFD_RELOC_MIPS_GOT_LO16
+			      || *r == BFD_RELOC_MIPS_CALL_HI16
+			      || *r == BFD_RELOC_MIPS_CALL_LO16
+			      || *r == BFD_RELOC_MIPS_SUB
+			      || *r == BFD_RELOC_MIPS_GOT_PAGE
+			      || *r == BFD_RELOC_MIPS_HIGHEST
+			      || *r == BFD_RELOC_MIPS_GOT_DISP
+			      || *r == BFD_RELOC_MIPS_TLS_GD
+			      || *r == BFD_RELOC_MIPS_TLS_LDM
+			      || *r == BFD_RELOC_MIPS_TLS_DTPREL_HI16
+			      || *r == BFD_RELOC_MIPS_TLS_DTPREL_LO16
+			      || *r == BFD_RELOC_MIPS_TLS_GOTTPREL
+			      || *r == BFD_RELOC_MIPS_TLS_TPREL_HI16
+			      || *r == BFD_RELOC_MIPS_TLS_TPREL_LO16)));
 	  break;
 
 	case 'o':
@@ -14676,6 +14771,16 @@ md_parse_option (int c, const char *arg)
       mips_fix_cn63xxp1 = FALSE;
       break;
 
+    case OPTION_FIX_R5900:
+      mips_fix_r5900 = TRUE;
+      mips_fix_r5900_explicit = TRUE;
+      break;
+
+    case OPTION_NO_FIX_R5900:
+      mips_fix_r5900 = FALSE;
+      mips_fix_r5900_explicit = TRUE;
+      break;
+
     case OPTION_RELAX_BRANCH:
       mips_relax_branch = 1;
       break;
@@ -14948,6 +15053,10 @@ mips_after_parse_args (void)
 
   /* Set up initial mips_opts state.  */
   mips_opts = file_mips_opts;
+
+  /* For the R5900 default to `-mfix-r5900' unless the user told otherwise.  */
+  if (!mips_fix_r5900_explicit)
+    mips_fix_r5900 = file_mips_opts.arch == CPU_R5900;
 
   /* The register size inference code is now placed in
      file_mips_check_options.  */
@@ -18977,6 +19086,18 @@ mips_convert_ase_flags (int ase)
     ext_ases |= AFL_ASE_XPA;
   if (ase & ASE_MIPS16E2)
     ext_ases |= file_ase_mips16 ? AFL_ASE_MIPS16E2 : 0;
+  if (ase & ASE_CRC)
+    ext_ases |= AFL_ASE_CRC;
+  if (ase & ASE_GINV)
+    ext_ases |= AFL_ASE_GINV;
+  if (ase & ASE_LOONGSON_MMI)
+    ext_ases |= AFL_ASE_LOONGSON_MMI;
+  if (ase & ASE_LOONGSON_CAM)
+    ext_ases |= AFL_ASE_LOONGSON_CAM;
+  if (ase & ASE_LOONGSON_EXT)
+    ext_ases |= AFL_ASE_LOONGSON_EXT;
+  if (ase & ASE_LOONGSON_EXT2)
+    ext_ases |= AFL_ASE_LOONGSON_EXT2;
 
   return ext_ases;
 }
@@ -19325,7 +19446,7 @@ s_mips_file (int x ATTRIBUTE_UNUSED)
     {
       char *filename;
 
-      filename = dwarf2_directive_file (0);
+      filename = dwarf2_directive_filename ();
 
       /* Versions of GCC up to 3.1 start files with a ".file"
 	 directive even for stabs output.  Make sure that this
@@ -19623,7 +19744,7 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
   { "r5900",          0, 0,			ISA_MIPS3,    CPU_R5900 },
   /* ST Microelectronics Loongson 2E and 2F cores */
   { "loongson2e",     0, 0,			ISA_MIPS3,    CPU_LOONGSON_2E },
-  { "loongson2f",     0, 0,			ISA_MIPS3,    CPU_LOONGSON_2F },
+  { "loongson2f",     0, ASE_LOONGSON_MMI,	ISA_MIPS3,    CPU_LOONGSON_2F },
 
   /* MIPS IV */
   { "r8000",          0, 0,			ISA_MIPS4,    CPU_R8000 },
@@ -19722,9 +19843,17 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
   /* Broadcom SB-1A CPU core */
   { "sb1a",           0, ASE_MIPS3D | ASE_MDMX,	ISA_MIPS64,   CPU_SB1 },
 
-  { "loongson3a",     0, 0,			ISA_MIPS64R2, CPU_LOONGSON_3A },
-
   /* MIPS 64 Release 2 */
+  /* Loongson CPU core */
+  /* -march=loongson3a is an alias of -march=gs464 for compatibility */
+  { "loongson3a",     0, ASE_LOONGSON_MMI | ASE_LOONGSON_CAM | ASE_LOONGSON_EXT,
+     ISA_MIPS64R2,	CPU_GS464 },
+  { "gs464",          0, ASE_LOONGSON_MMI | ASE_LOONGSON_CAM | ASE_LOONGSON_EXT,
+     ISA_MIPS64R2,	CPU_GS464 },
+  { "gs464e",         0, ASE_LOONGSON_MMI | ASE_LOONGSON_CAM | ASE_LOONGSON_EXT
+     | ASE_LOONGSON_EXT2,	ISA_MIPS64R2,	CPU_GS464E },
+  { "gs264e",         0, ASE_LOONGSON_MMI | ASE_LOONGSON_CAM | ASE_LOONGSON_EXT
+     | ASE_LOONGSON_EXT2 | ASE_MSA | ASE_MSA64,	ISA_MIPS64R2,	CPU_GS264E },
 
   /* Cavium Networks Octeon CPU core */
   { "octeon",	      0, 0,			ISA_MIPS64R2, CPU_OCTEON },
@@ -19958,6 +20087,9 @@ MIPS options:\n\
 -mips16			generate mips16 instructions\n\
 -no-mips16		do not generate mips16 instructions\n"));
   fprintf (stream, _("\
+-mmips16e2		generate MIPS16e2 instructions\n\
+-mno-mips16e2		do not generate MIPS16e2 instructions\n"));
+  fprintf (stream, _("\
 -mmicromips		generate microMIPS instructions\n\
 -mno-micromips		do not generate microMIPS instructions\n"));
   fprintf (stream, _("\
@@ -19988,6 +20120,24 @@ MIPS options:\n\
 -mvirt			generate Virtualization instructions\n\
 -mno-virt		do not generate Virtualization instructions\n"));
   fprintf (stream, _("\
+-mcrc			generate CRC instructions\n\
+-mno-crc		do not generate CRC instructions\n"));
+  fprintf (stream, _("\
+-mginv			generate Global INValidate (GINV) instructions\n\
+-mno-ginv		do not generate Global INValidate instructions\n"));
+  fprintf (stream, _("\
+-mloongson-mmi		generate Loongson MultiMedia extensions Instructions (MMI) instructions\n\
+-mno-loongson-mmi	do not generate Loongson MultiMedia extensions Instructions\n"));
+  fprintf (stream, _("\
+-mloongson-cam		generate Loongson Content Address Memory (CAM) instructions\n\
+-mno-loongson-cam	do not generate Loongson Content Address Memory Instructions\n"));
+  fprintf (stream, _("\
+-mloongson-ext		generate Loongson EXTensions (EXT) instructions\n\
+-mno-loongson-ext	do not generate Loongson EXTensions Instructions\n"));
+  fprintf (stream, _("\
+-mloongson-ext2		generate Loongson EXTensions R2 (EXT2) instructions\n\
+-mno-loongson-ext2	do not generate Loongson EXTensions R2 Instructions\n"));
+  fprintf (stream, _("\
 -minsn32		only generate 32-bit microMIPS instructions\n\
 -mno-insn32		generate all microMIPS instructions\n"));
   fprintf (stream, _("\
@@ -19997,11 +20147,13 @@ MIPS options:\n\
 -mfix-vr4130		work around VR4130 mflo/mfhi errata\n\
 -mfix-24k		insert a nop after ERET and DERET instructions\n\
 -mfix-cn63xxp1		work around CN63XXP1 PREF errata\n\
+-mfix-r5900		work around R5900 short loop errata\n\
 -mgp32			use 32-bit GPRs, regardless of the chosen ISA\n\
 -mfp32			use 32-bit FPRs, regardless of the chosen ISA\n\
 -msym32			assume all symbols have 32-bit values\n\
--O0			remove unneeded NOPs, do not swap branches\n\
--O			remove unneeded NOPs and swap branches\n\
+-O0			do not remove unneeded NOPs, do not swap branches\n\
+-O, -O1			remove unneeded NOPs, do not swap branches\n\
+-O2			remove unneeded NOPs and swap branches\n\
 --trap, --no-break	trap exception on div by 0 and mult overflow\n\
 --break, --no-trap	break exception on div by 0 and mult overflow\n"));
   fprintf (stream, _("\
@@ -20044,9 +20196,14 @@ MIPS options:\n\
   fputc ('\n', stream);
 
   fprintf (stream, _("\
--32			create o32 ABI object file (default)\n\
--n32			create n32 ABI object file\n\
--64			create 64 ABI object file\n"));
+-32			create o32 ABI object file%s\n"),
+	   MIPS_DEFAULT_ABI == O32_ABI ? _(" (default)") : "");
+  fprintf (stream, _("\
+-n32			create n32 ABI object file%s\n"),
+	   MIPS_DEFAULT_ABI == N32_ABI ? _(" (default)") : "");
+  fprintf (stream, _("\
+-64			create 64 ABI object file%s\n"),
+	   MIPS_DEFAULT_ABI == N64_ABI ? _(" (default)") : "");
 }
 
 #ifdef TE_IRIX

@@ -1,134 +1,109 @@
-2018-05-16  Tamar Christina  <tamar.christina@arm.com>
+2019-02-02  Nick Clifton  <nickc@redhat.com>
 
-	Backport from master branch
+	2.32 Release
+	* configure: Regenerate.
+	* po/opcodes.pot: Regenerate.
 
-	PR binutils/23109
-	* aarch64-tbl.h (aarch64_opcode_table): Correct sdot and udot.
-	* aarch64-dis-2.c: Regenerate.
-
-2018-04-25  Tamar Christina  <tamar.christina@arm.com>
-
-	Backport from master branch
-	* aarch64-tbl.h (sqrdmlah, sqrdmlsh): Fix masks.
-
-2018-04-04  H.J. Lu  <hongjiu.lu@intel.com>
-
-	Backport from master branch
-	2018-04-04  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR binutils/23025
-	* i386-dis.c (get_valid_dis386): Don't set vex.prefix nor vex.w
-	to 0.
-	(print_insn): Clear vex instead of vex.evex.
-
-2018-03-16  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+2019-01-31  Andreas Krebbel  <krebbel@linux.ibm.com>
 
 	Backport from mainline
-	2018-02-19  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+	2019-01-31  Andreas Krebbel  <krebbel@linux.ibm.com>
 
-	* arm-dis.c (thumb_opcodes): Fix BXNS mask.
+	* s390-mkopc.c (main): Accept arch13 as cpu string.
+	* s390-opc.c: Add new instruction formats and instruction opcode
+	masks.
+	* s390-opc.txt: Add new arch13 instructions.
 
-2018-02-05  Nick Clifton  <nickc@redhat.com>
+2019-01-25  Sudakshina Das  <sudi.das@arm.com>
+
+	* aarch64-tbl.h (QL_LDST_AT): Update macro.
+	(aarch64_opcode): Change encoding for stg, stzg
+	st2g and st2zg.
+	* aarch64-asm-2.c: Regenerated.
+	* aarch64-dis-2.c: Regenerated.
+	* aarch64-opc-2.c: Regenerated.
+
+2019-01-25  Sudakshina Das  <sudi.das@arm.com>
+
+	* aarch64-asm-2.c: Regenerated.
+	* aarch64-dis-2.c: Likewise.
+	* aarch64-opc-2.c: Likewise.
+	* aarch64-tbl.h (aarch64_opcode): Add new stzgm.
+
+2019-01-25  Sudakshina Das  <sudi.das@arm.com>
+	    Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+
+	* aarch64-asm.c (aarch64_ins_addr_simple_2): Remove.
+	* aarch64-asm.h (ins_addr_simple_2): Likeiwse.
+	* aarch64-dis.c (aarch64_ext_addr_simple_2): Likewise.
+	* aarch64-dis.h (ext_addr_simple_2): Likewise.
+	* aarch64-opc.c (operand_general_constraint_met_p): Remove
+	case for ldstgv_indexed.
+	(aarch64_print_operand): Remove case for AARCH64_OPND_ADDR_SIMPLE_2.
+	* aarch64-tbl.h (struct aarch64_opcode): Remove ldgv and stgv.
+	(AARCH64_OPERANDS): Remove ADDR_SIMPLE_2.
+	* aarch64-asm-2.c: Regenerated.
+	* aarch64-dis-2.c: Regenerated.
+	* aarch64-opc-2.c: Regenerated.
+
+2019-01-23  Nick Clifton  <nickc@redhat.com>
 
 	* po/pt_BR.po: Updated Brazilian Portuguese translation.
 
-2018-01-27  Nick Clifton  <nickc@redhat.com>
+2019-01-22  Chenghua Xu  <paul.hua.gm@gmail.com>
 
-	Back to development.
+	* mips-dis.c (mips_arch_choices): Fix typo in
+	gs464, gs464e and gs264e descriptors.
 
-	* configure: Regenerate.
-	* po/opcodes.pot: Regenerate.
+2019-01-21  Nick Clifton  <nickc@redhat.com>
 
-2018-01-27  Nick Clifton  <nickc@redhat.com>
-
-	This is the 2.30 release:
-
-	* configure: Regenerate.
-	* po/opcodes.pot: Regenerate.
-
-2018-01-23  Nick Clifton  <nickc@redhat.com>
-
-	* configure: Regenerate.
-
-2018-01-16  Nick Clifton  <nickc@redhat.com>
-
-	* po/pt_BR.po: Updated Brazilian Portugese translation.
 	* po/de.po: Updated German translation.
-
-2018-01-15  Nick Clifton  <nickc@redhat.com>
-
 	* po/uk.po: Updated Ukranian translation.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2019-01-19  Nick Clifton  <nickc@redhat.com>
 
+	* configure: Regenerate.
 	* po/opcodes.pot: Regenerate.
+
+2018-06-24  Nick Clifton  <nickc@redhat.com>
+
+	2.32 branch created.
+
+2019-01-09  John Darrington <john@darrington.wattle.id.au>
+
+	* s12z-dis.c (print_insn_s12z):  Do not dereference an operand
+	if it is null.
+	-dis.c (opr_emit_disassembly): Do not omit an index if it is
+	zero.
+
+2019-01-09  Andrew Paprocki  <andrew@ishiboo.com>
+
 	* configure: Regenerate.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2019-01-07  Alan Modra  <amodra@gmail.com>
 
-	2.30 branch created.
+	* configure: Regenerate.
+	* po/POTFILES.in: Regenerate.
 
-2018-01-11  Igor Tsimbalist  <igor.v.tsimbalist@intel.com>
+2019-01-03  John Darrington <john@darrington.wattle.id.au>
 
-	* i386-opc.tbl: Remove VL variants for 4FMAPS and 4VNNIW insns.
-	* i386-tbl.h: Regenerate.
+	* s12z-opc.c: New file.
+	* s12z-opc.h: New file.
+	* s12z-dis.c: Removed all code not directly related to display
+	of instructions.  Used the interface provided by the new files
+	instead.
+	* Makefile.am (TARGET_LIBOPCODES_CFILES) Add s12z-opc.c.
+	* Makefile.in: Regenerate.
+	* configure.ac (bfd_s12z_arch): Correct the dependencies.
+	* configure: Regenerate.
 
-2018-01-10  Jan Beulich  <jbeulich@suse.com>
-
-	* i386-opc.tbl (v4fmaddss, v4fnmaddss): Adjust Disp8MemShift.
-	* i386-tbl.h: Re-generate.
-
-2018-01-10  Jan Beulich  <jbeulich@suse.com>
-
-	* i386-opc.tbl (vpcmpeqb, vpcmpleb, vpcmpltb, vpcmpneqb,
-	vpcmpnleb, vpcmpnltb, vpcmpequb, vpcmpleub, vpcmpltub,
-	vpcmpnequb, vpcmpnleub, vpcmpnltub, vpcmpeqw, vpcmplew,
-	vpcmpltw, vpcmpneqw, vpcmpnlew, vpcmpnltw, vpcmpequw, vpcmpleuw,
-	vpcmpltuw, vpcmpnequw, vpcmpnleuw, vpcmpnltuw): Adjust
-	Disp8MemShift of AVX512VL forms.
-	* i386-tbl.h: Re-generate.
-
-2018-01-09  Jim Wilson  <jimw@sifive.com>
-
-	* riscv-dis.c (maybe_print_address): If base_reg is zero,
-	then the hi_addr value is zero.
-
-2018-01-09  James Greenhalgh  <james.greenhalgh@arm.com>
-
-	* arm-dis.c (arm_opcodes): Add csdb.
-	(thumb32_opcodes): Add csdb.
-
-2018-01-09  James Greenhalgh  <james.greenhalgh@arm.com>
-
-	* aarch64-tbl.h (aarch64_opcode_table): Add "csdb".
-	* aarch64-asm-2.c: Regenerate.
-	* aarch64-dis-2.c: Regenerate.
-	* aarch64-opc-2.c: Regenerate.
-
-2018-01-08  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR gas/22681
-	* i386-opc.tbl: Properly encode vmovd with Qword memeory operand.
-	Remove AVX512 vmovd with 64-bit operands.
-	* i386-tbl.h: Regenerated.
-
-2018-01-05  Jim Wilson  <jimw@sifive.com>
-
-	* riscv-dis.c (print_insn_args) <'s'>: Call maybe_print_address for a
-	jalr.
-
-2018-01-03  Alan Modra  <amodra@gmail.com>
+2019-01-01  Alan Modra  <amodra@gmail.com>
 
 	Update year range in copyright notice of all files.
 
-2018-01-02  Jan Beulich  <jbeulich@suse.com>
-
-	* i386-gen.c (operand_type_init): Restore OPERAND_TYPE_REGYMM
-	and OPERAND_TYPE_REGZMM entries.
-
-For older changes see ChangeLog-2017
+For older changes see ChangeLog-2018
 
-Copyright (C) 2018 Free Software Foundation, Inc.
+Copyright (C) 2019 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

@@ -1,5 +1,5 @@
 /* x86 specific support for ELF
-   Copyright (C) 2017-2018 Free Software Foundation, Inc.
+   Copyright (C) 2017-2019 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -23,7 +23,6 @@
 #include "bfdlink.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
-#include "bfd_stdint.h"
 #include "hashtab.h"
 
 #define PLT_CIE_LENGTH		20
@@ -76,14 +75,11 @@
    into the shared library.  However, if we are linking with -Bsymbolic,
    we do not need to copy a reloc against a global symbol which is
    defined in an object we are including in the link (i.e., DEF_REGULAR
-   is set).  At this point we have not seen all the input files, so it
-   is possible that DEF_REGULAR is not set now but will be set later (it
-   is never cleared).  In case of a weak definition, DEF_REGULAR may be
-   cleared later by a strong definition in a shared library.  We account
-   for that possibility below by storing information in the relocs_copied
-   field of the hash table entry.  A similar situation occurs when
-   creating shared libraries and symbol visibility changes render the
-   symbol local.
+   is set).
+
+   If PCREL_PLT is true, don't generate dynamic relocation in PIE for
+   PC-relative relocation against a dynamic function definition in data
+   section when PLT address can be used.
 
    If on the other hand, we are creating an executable, we may need to
    keep relocations for symbols satisfied by a dynamic library if we
@@ -91,23 +87,30 @@
 
    We also need to generate dynamic pointer relocation against
    STT_GNU_IFUNC symbol in the non-code section.  */
-#define NEED_DYNAMIC_RELOCATION_P(INFO, H, SEC, R_TYPE, POINTER_TYPE) \
+#define NEED_DYNAMIC_RELOCATION_P(INFO, PCREL_PLT, H, SEC, R_TYPE, \
+				  POINTER_TYPE) \
   ((bfd_link_pic (INFO) \
     && (! X86_PCREL_TYPE_P (R_TYPE) \
 	|| ((H) != NULL \
 	    && (! (bfd_link_pie (INFO) \
 		   || SYMBOLIC_BIND ((INFO), (H))) \
 		|| (H)->root.type == bfd_link_hash_defweak \
-		|| !(H)->def_regular)))) \
-		|| ((H) != NULL \
-		    && (H)->type == STT_GNU_IFUNC \
-		    && (R_TYPE) == POINTER_TYPE \
-		    && ((SEC)->flags & SEC_CODE) == 0) \
-		    || (ELIMINATE_COPY_RELOCS \
-			&& !bfd_link_pic (INFO) \
-			&& (H) != NULL \
-			&& ((H)->root.type == bfd_link_hash_defweak \
-			    || !(H)->def_regular)))
+		|| (!(bfd_link_pie (INFO) \
+		      && (PCREL_PLT) \
+		      && (H)->plt.refcount > 0 \
+		      && ((SEC)->flags & SEC_CODE) == 0 \
+		      && (H)->type == STT_FUNC \
+		      && (H)->def_dynamic) \
+		    && !(H)->def_regular))))) \
+   || ((H) != NULL \
+       && (H)->type == STT_GNU_IFUNC \
+       && (R_TYPE) == POINTER_TYPE \
+       && ((SEC)->flags & SEC_CODE) == 0) \
+   || (ELIMINATE_COPY_RELOCS \
+       && !bfd_link_pic (INFO) \
+       && (H) != NULL \
+       && ((H)->root.type == bfd_link_hash_defweak \
+	   || !(H)->def_regular)))
 
 /* TRUE if dynamic relocation should be generated.  Don't copy a
    pc-relative relocation into the output file if the symbol needs
@@ -385,6 +388,9 @@ struct elf_x86_plt_layout
      This is only used for x86-64.  */
   unsigned int plt_got_insn_size;
 
+  /* Alignment of the .iplt section.  */
+  unsigned int iplt_alignment;
+
   /* .eh_frame covering the .plt section.  */
   const bfd_byte *eh_frame_plt;
   unsigned int eh_frame_plt_size;
@@ -494,6 +500,14 @@ struct elf_x86_link_hash_table
 
   /* TRUE if GOT is referenced.  */
   unsigned int got_referenced : 1;
+
+  /* TRUE if PLT is PC-relative.  PLT in PDE and PC-relative PLT in PIE
+     can be used as function address.
+
+     NB: i386 has non-PIC PLT and PIC PLT.  Only non-PIC PLT in PDE can
+     be used as function address.  PIC PLT in PIE can't be used as
+     function address.  */
+  unsigned int pcrel_plt : 1;
 
   bfd_vma (*r_info) (bfd_vma, bfd_vma);
   bfd_vma (*r_sym) (bfd_vma);
@@ -672,8 +686,15 @@ extern enum elf_property_kind _bfd_x86_elf_parse_gnu_properties
 extern bfd_boolean _bfd_x86_elf_merge_gnu_properties
   (struct bfd_link_info *, bfd *, elf_property *, elf_property *);
 
+extern void _bfd_x86_elf_link_fixup_gnu_properties
+  (struct bfd_link_info *, elf_property_list **);
+
 extern bfd * _bfd_x86_elf_link_setup_gnu_properties
   (struct bfd_link_info *, struct elf_x86_init_table *);
+
+extern void _bfd_x86_elf_link_fixup_ifunc_symbol
+  (struct bfd_link_info *, struct elf_x86_link_hash_table *,
+   struct elf_link_hash_entry *, Elf_Internal_Sym *sym);
 
 #define bfd_elf64_mkobject \
   _bfd_x86_elf_mkobject
@@ -705,8 +726,10 @@ extern bfd * _bfd_x86_elf_link_setup_gnu_properties
 #define elf_backend_gc_mark_hook \
   _bfd_x86_elf_gc_mark_hook
 #define elf_backend_omit_section_dynsym \
-  ((bfd_boolean (*) (bfd *, struct bfd_link_info *, asection *)) bfd_true)
+  _bfd_elf_omit_section_dynsym_all
 #define elf_backend_parse_gnu_properties \
   _bfd_x86_elf_parse_gnu_properties
 #define elf_backend_merge_gnu_properties \
   _bfd_x86_elf_merge_gnu_properties
+#define elf_backend_fixup_gnu_properties \
+  _bfd_x86_elf_link_fixup_gnu_properties

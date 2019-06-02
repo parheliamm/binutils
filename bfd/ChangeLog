@@ -1,486 +1,133 @@
-2018-05-28  H.J. Lu  <hongjiu.lu@intel.com>
+2019-02-02  Nick Clifton  <nickc@redhat.com>
 
-	* elf32-i386.c (elf_i386_lazy_plt): Add plt_tlsdesc_entry,
-	plt_tlsdesc_entry_size, plt_tlsdesc_got1_offset,
-	plt_tlsdesc_got2_offset, plt_tlsdesc_got1_insn_end and
-	plt_tlsdesc_got2_insn_end for TLSDESC entry.
-	(elf_i386_lazy_ibt_plt): Likewise.
-	(elf_i386_nacl_plt): Likewise.
-	* elf64-x86-64.c (tlsdesc_plt_entry): Moved and renamed to ...
-	(elf_x86_64_tlsdesc_plt_entry): This.
-	(elf_x86_64_lazy_plt): Add plt_tlsdesc_entry,
-	plt_tlsdesc_entry_size, plt_tlsdesc_got1_offset,
-	plt_tlsdesc_got2_offset, plt_tlsdesc_got1_insn_end and
-	plt_tlsdesc_got2_insn_end for TLSDESC entry.
-	(elf_x86_64_lazy_bnd_plt): Likewise.
-	(elf_x86_64_lazy_ibt_plt): Likewise.
-	(elf_x32_lazy_ibt_plt): Likewise.
-	(elf_x86_64_nacl_plt): Likewise.
-	(elf_x86_64_finish_dynamic_sections): Use plt_tlsdesc_entry,
-	plt_tlsdesc_entry_size, plt_tlsdesc_got1_offset,
-	plt_tlsdesc_got2_offset, plt_tlsdesc_got1_insn_end and
-	plt_tlsdesc_got2_insn_end to update TLSDESC entry.
-	* elfxx-x86.h (elf_x86_lazy_plt_layout): Update comments.
-	Add plt_tlsdesc_entry, plt_tlsdesc_entry_size,
-	plt_tlsdesc_got1_offset, plt_tlsdesc_got2_offset,
-	plt_tlsdesc_got1_insn_end and plt_tlsdesc_got2_insn_end.
-	(elf_x86_non_lazy_plt_layout): Update comments.
-	(elf_x86_plt_layout): Likewise.
-
-2018-05-22  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR binutils/23199
-	* elf.c (setup_group): Mark section in a section group with
-	SHF_GROUP.
-
-2018-05-21  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/23194
-	* elfxx-x86.c (_bfd_x86_elf_link_symbol_references_local): Don't
-	set eh->local_ref to 1 if a symbol is versioned and there is a
-	version script.
-
-2018-05-21  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/23189
-	* elf32-i386.c (elf_i386_relocate_section): Handle R_386_GOT32X
-	like R_386_GOT32.
-	* elfxx-x86.c (_bfd_x86_elf_link_symbol_references_local): Don't
-	set eh->local_ref to 1 for linker defined symbols.
-
-2018-05-18  Alan Modra  <amodra@gmail.com>
-
-	PR 23199
-	* elf.c (setup_group): Formatting.  Check that SHT_GROUP entries
-	don't point at other SHT_GROUP sections.  Set shdr corresponding
-	to invalid entry, to NULL rather than section 0.  Identify
-	SHT_GROUP section index when reporting an error.  Cope with NULL
-	shdr pointer.
-
-2018-05-15  Christophe Guillon  <christophe.guillon@st.com>
-
-	* coffcode.h (coff_bigobj_swap_aux_in): Make sure that all fields
-	of the aux structure are initialised.
-
-2018-05-15  Nick Clifton  <nickc@redhat.com>
-
-	* po/pt.po: New Portuguese translation.
-	* configure.ac (ALL_LINGUAS): Add pt.
-	* configure: Regenerate.
-
-2018-04-27  Alan Modra  <amodra@gmail.com>
-
-	PR 23123
-	PR 22374
-	* elf32-ppc.c (ppc_elf_adjust_dynamic_symbol): Don't drop plt
-	relocs for ifuncs.
-	* elf64-ppc.c (ppc64_elf_adjust_dynamic_symbol): Comment fixes.
-
-2018-02-09  H.J. Lu  <hongjiu.lu@intel.com>
-
-	* elf32-i386.c (elf_i386_get_synthetic_symtab): Also handle
-	is_solaris.
-	(i386_elf32_sol2_vec): Don't declare.
-	(elf_i386_link_setup_gnu_properties): Also handle is_solaris.
-	Don't set need_global_offset_table.
-	(elf_i386_solaris_arch_bed): New.
-	(elf_backend_arch_data): Set to elf_i386_solaris_arch_bed for
-	Solaris.
-	* elf64-x86-64.c (elf_x86_64_get_synthetic_symtab): Check
-	target_os != is_nacl instead of target_os == is_normal.
-	(x86_64_elf64_sol2_vec): Don't declare.
-	(elf_x86_64_link_setup_gnu_properties): Check target_os !=
-	is_nacl instead of target_os == is_normal.  Don't set
-	need_global_offset_table.
-	(elf_x86_64_solaris_arch_bed): New.
-	(elf_backend_arch_data): Set to elf_x86_64_solaris_arch_bed for
-	Solaris.
-	* elfxx-x86.c (_bfd_x86_elf_size_dynamic_sections): Keep
-	_GLOBAL_OFFSET_TABLE_ for Solaris.
-	(_bfd_x86_elf_link_setup_gnu_properties): Don't copy
-	need_global_offset_table.
-	* elfxx-x86.h (elf_x86_target_os): Add is_solaris.
-	(elf_x86_link_hash_table): Remove need_global_offset_table.
-	(elf_x86_init_table): Likewise.
-
-2018-02-08  H.J. Lu  <hongjiu.lu@intel.com>
-
-	* elf32-i386.c (elf32_i386_copy_solaris_special_section_fields):
-	New prototype.
-	(elf_i386_link_setup_gnu_properties): Set need_global_offset_table
-	for Solaris.
-	* elf64-x86-64.c (elf64_x86_64_copy_solaris_special_section_fields):
-	New prototype.
-	(elf_x86_64_link_setup_gnu_properties): Set
-	need_global_offset_table for Solaris.
-	* elfxx-x86.c (_bfd_x86_elf_size_dynamic_sections): Keep the
-	unused _GLOBAL_OFFSET_TABLE_ for Solaris.
-	(_bfd_x86_elf_link_setup_gnu_properties): Copy
-	need_global_offset_table.
-	* elfxx-x86.h (elf_x86_link_hash_table): Add
-	need_global_offset_table.
-	(elf_x86_init_table): Likewise.
-
-2018-02-05  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/22782
-	* elf32-i386.c (elf_i386_check_relocs): Set got_referenced if
-	_GLOBAL_OFFSET_TABLE_ is referenced or GOT is needed to resolve
-	undefined weak symbol to 0.
-	* elf64-x86-64.c (elf_x86_64_check_relocs): Set got_referenced
-	if _GLOBAL_OFFSET_TABLE_ is referenced.
-	* elfxx-x86.c (_bfd_x86_elf_size_dynamic_sections): Check
-	got_referenced instead of ref_regular_nonweak.  Remove the
-	unused _GLOBAL_OFFSET_TABLE_ from symbol table.
-	* elfxx-x86.h (elf_x86_link_hash_table): Add got_referenced.
-
-2018-03-28  Eric Botcazou  <ebotcazou@adacore.com>
-
-	PR ld/22972
-	* elfxx-sparc.c (struct _bfd_sparc_elf_link_hash_entry): Add new flag
-	has_old_style_got_reloc.
-	(_bfd_sparc_elf_check_relocs) <GOT relocations>: Set it for old-style
-	relocations.  Fix a couple of long lines.
-	(_bfd_sparc_elf_relocate_section) <R_SPARC_GOTDATA_OP>: Do not generate
-	a R_SPARC_NONE for the GOT slot if the symbol is also subject to old-style
-	GOT relocations.
-
-2018-03-26  H.J. Lu  <hongjiu.lu@intel.com>
-
-	Backport from master branch
-	2018-03-25  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/23000
-	* elf64-x86-64.c (elf_x86_64_finish_dynamic_sections): Add
-	ENDBR64 to the TLSDESC PLT entry.
-
-2018-03-21  Alan Modra  <amodra@gmail.com>
-
-	Apply from master
-	2018-03-14  Alan Modra  <amodra@gmail.com>
-	* elf64-ppc.c (sfpr_define): Adjust for stub_sec size having
-	sfpr size added before defining alias symbols.
-	(ppc64_elf_build_stubs): Add stub section padding before
-	copying sfpr contents and defining save/restore alias symbols.
-
-2018-03-20  H.J. Lu  <hongjiu.lu@intel.com>
-
-	Backport from master branch
-	2018-03-20  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/22983
-	* elflink.c (bfd_elf_link_mark_dynamic_symbol): Set
-	non_ir_ref_dynamic if a symbol is made dynamic by --dynamic-list.
-
-2018-03-19  H.J. Lu  <hongjiu.lu@intel.com>
-
-	Backport from master branch
-	2018-02-13  Alan Modra  <amodra@gmail.com>
-
-	PR 22836
-	* elf.c (_bfd_elf_fixup_group_sections): Account for removed
-	relocation sections.  If size reduces to just the flag word,
-	remove that too and mark with SEC_EXCLUDE.
-	* elflink.c (bfd_elf_final_link): Strip empty group sections.
-
-2018-03-14  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/20882
-	* elflink.c (elf_gc_mark_debug_section): Also check the local
-	debug definition section.
-
-2018-02-28  Jim Wilson  <jimw@sifive.com>
-
-	Import patch from mainline:
-	2018-02-26  Jim Wilson  <jimw@sifive.com>
-	Stephan Schreiber <info@fs-driver.org>
-
-	PR 15904
-	* elfnn-ia64.c (elfNN_ia64_relax_section): After ia64_elf_relax_brl
-	call, set changed_contents and changed_relocs.  Likewise after
-	successful ia64_elf_relax_br call.
-
-2018-02-28  Nick Clifton  <nickc@redhat.com>
-
-	Import patch from the mainline:
-	2018-02-20  Jason Duerstock  <jason.duerstock@gmail.com>
-
-	* elfnn-ia64.c (elf_backend_can_gc_sections): Enable.
-
-2018-02-15  Nick Clifton  <nickc@redhat.com>
-
-	Import patch from mainline:
-	2018-01-30  Alan Modra  <amodra@gmail.com>
-
-	PR 22758
-	* elf.c (_bfd_elf_map_sections_to_segments): Don't start a new
-	segment when demand paged with lma on the same page.  Test this
-	before load/non-load, executable/non-executable,
-	writable/non-writable tests and simplify.  Delete bogus relro
-	condition in writable/non-writable test.  Delete outdated
-	comment.  Formatting.
-
-2018-02-15  Eric Botcazou  <ebotcazou@adacore.com>
-
-	PR ld/22832
-	* elfxx-sparc.c (_bfd_sparc_elf_check_relocs) <R_SPARC_TLS_GD_CALL>:
-	Pass FALSE instead of TRUE as 'create' argument to bfd_link_hash_lookup
-	and assert that the result of the call is not NULL.
-
-2018-02-09  Eric Botcazou  <ebotcazou@adacore.com>
-
-	* elfxx-sparc.c (UNDEFINED_WEAK_RESOLVED_TO_ZERO): Reorder conditions.
-	(sparc_elf_append_rela): Assert that there is enough room in section.
-	(_bfd_sparc_elf_copy_indirect_symbol): Fix formatting.
-	(_bfd_sparc_elf_adjust_dynamic_symbol): Minor tweak.
-	(allocate_dynrelocs): Remove outdated comments and reorder conditions.
-	For a symbol subject to a GOT relocation, reserve a slot in the
-	relocation section if the symbol isn't dynamic and we are in PIC mode.
-	(_bfd_sparc_elf_relocate_section) <R_SPARC_GOTDATA_OP>: If relocation
-	is relaxed and a slot was reserved, generate a R_SPARC_NONE relocation.
-	<R_SPARC_GOTDATA_OP_HIX22>: Adjust comments.
-	<R_SPARC_PC10>: Reorder conditions.  Remove always-false assertion.
-	(_bfd_sparc_elf_finish_dynamic_symbol): Rename local_undefweak into
-	resolved_to_zero.  Do not generate a dynamic GOT relocation for an
-	undefined weak symbol with non-default visibility.  Remove superfluous
-	'else' and fix formatting.
-
-2018-02-09  Nick Clifton  <nickc@redhat.com>
-
-	Import patch from mainline:
-	2018-02-08  Nick Clifton  <nickc@redhat.com>
-
-	PR 22788
-	* elf.c (elf_parse_notes): Reject notes with excessuively large
-	alignments.
-
-2018-02-07  Alan Modra  <amodra@gmail.com>
-
-	Revert 2018-01-17  Alan Modra  <amodra@gmail.com>
-	* elf32-ppc.c: Remove speculation barrier support.
-	* elf32-ppc.h: Likewise.
-	* elf64-ppc.c: Likewise.
-	* elf64-ppc.h: Likewise.
-
-2018-02-05  Renlin Li  <renlin.li@arm.com>
-
-	PR ld/22764
-	* elfnn-aarch64.c (elfNN_aarch64_check_relocs): Relax the
-	R_AARCH64_ABS32 and R_AARCH64_ABS16 for absolute symbol. Apply the
-	check for writeable section as well.
-
-2018-01-27  Nick Clifton  <nickc@redhat.com>
-
-	Back to development.
-
-	* version.m4 (BFD_VERSION): Set to 2.30.0
-	* development.sh: Set to true.
+	2.32 Release
+	* version.m4 (BFD_VERSION): Set to 2.32.
+	* development.sh (development): Set to false.
+	(experimental) Set to false.
 	* configure: Regenerate.
 	* po/bfd.pot: Regenerate.
 
-2018-01-27  Nick Clifton  <nickc@redhat.com>
+2019-01-28  Nick Clifton  <nickc@redhat.com>
 
-	This is the 2.30 release:
+	Import from mainline:
+	2019-01-21  Sergio Durigan Junior  <sergiodj@redhat.com>
 
-	* version.m4 (BFD_VERSION): Set to 2.30
-	* development.sh: Set to false.
-	* configure: Regenerate.
-	* po/bfd.pot: Regenerate.
+	* elf32-arm.c (elf32_arm_final_link_relocate): Use 'llabs' instead
+	of 'labs' (and fix GCC warning).
 
-2018-01-27  Nick Clifton  <nickc@redhat.com>
+2019-01-25  Nick Clifton  <nickc@redhat.com>
 
 	* po/ru.po: Updated Russian translation.
 
-2018-01-26  Alan Modra  <amodra@gmail.com>
-
-	* elf64-ppc.c (ppc64_elf_size_stubs): Iterate sizing when
-	.branch_lt changes size.
-
-2018-01-25  Eric Botcazou  <ebotcazou@adacore.com>
-
-	PR ld/22727
-	* elfxx-sparc.c (_bfd_sparc_elf_check_relocs) <R_SPARC_TLS_GD_CALL>:
-	Do a mere lookup of the __tls_get_addr symbol instead of adding it.
-
-	Revert
-	2017-10-19  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/22263
-	* elfxx-sparc.c (sparc_elf_tls_transition): Replace
-	bfd_link_pic with !bfd_link_executable, !bfd_link_pic with
-	bfd_link_executable for TLS check.
-	(_bfd_sparc_elf_check_relocs): Likewise.
-	(allocate_dynrelocs): Likewise.
-	(_bfd_sparc_elf_relocate_section): Likewise.
-
-2018-01-23  Nick Clifton  <nickc@redhat.com>
-
-	* version.m4: Reset version number to 2.29.90.
-	* configure: Regenerate.
-
-2018-01-20  H.J. Lu  <hongjiu.lu@intel.com>
-
-	PR ld/22721
-	* elfxx-x86.c (_bfd_x86_elf_link_check_relocs): Check the
-	versioned __tls_get_addr symbol.
-
-2018-01-19  Nick Clifton  <nickc@redhat.com>
+2019-01-23  Nick Clifton  <nickc@redhat.com>
 
 	* po/fr.po: Updated French translation.
 
-2018-01-18  Alan Modra  <amodra@gmail.com>
+2019-01-21  Nick Clifton  <nickc@redhat.com>
 
-	* elf32-ppc.c (ppc_elf_create_glink): Correct alignment of .glink.
-	* elf64-ppc.c (ppc64_elf_size_stubs): Handle negative plt_stub_align.
-	(ppc64_elf_build_stubs): Likewise.
-
-2018-01-18  Alan Modra  <amodra@gmail.com>
-
-	* elf32-ppc.c (GLINK_ENTRY_SIZE): Handle speculation barrier.
-	(CRSETEQ, BEQCTRM): Define.
-	(is_nonpic_glink_stub): Don't check bctr.
-	(ppc_elf_link_hash_table_create): Init new ppc_elf_params field.
-	(ppc_elf_relax_section): Size speculation barrier.
-	(output_bctr): New function.
-	(write_glink_stub): Use output_bctr.
-	(ppc_elf_relocate_section): Use output_bctr for long branch stub.
-	(ppc_elf_finish_dynamic_symbol): Likewise.
-	(ppc_elf_finish_dynamic_sections): Use output_bctr.
-	* elf32-ppc.h (struct ppc_elf_params): Add speculate_indirect_jumps.
-	* elf64-ppc.c (CRSETEQ, BEQCTRM, BEQCTRLM): Define.
-	(GLINK_PLTRESOLVE_SIZE): Size speculation barrier.
-	(size_global_entry_stubs): Handle speculation barrier sizing.
-	(plt_stub_size): Likewise.
-	(output_bctr): New function.
-	(build_plt_stub, build_tls_get_addr_stub): Output speculation
-	barrier.
-	(ppc_build_one_stub): Likewise for ppc_stub_plt_branch.
-	(ppc_size_one_stub): Size speculation barrier in ppc_stub_plt_branch.
-	(build_global_entry_stubs): Output speculation barrier.
-	(ppc64_elf_build_stubs): Likewise in __glink_PLTresolve stub.
-	* elf64-ppc.h (struct ppc64_elf_params): Add speculate_indirect_jumps.
-
-2018-01-18  Alan Modra  <amodra@gmail.com>
-
-	* elf64-ppc.c (ppc64_elf_build_stubs): Silence gcc warning.
-
-2018-01-18  Alan Modra  <amodra@gmail.com>
-
-	* elf32-ppc.c (GLINK_ENTRY_SIZE): Add parameters, handle
-	__tls_get_addr_opt, and alignment sizing.
-	(TLS_GET_ADDR_GLINK_SIZE): Delete.
-	(is_nonpic_glink_stub): Don't use GLINK_ENTRY_SIZE.
-	(ppc_elf_get_synthetic_symtab): Recognize stubs spaced at 4, 6,
-	or 8 insns.
-	(ppc_elf_link_hash_table_create): Init new ppc_elf_params field.
-	(allocate_dynrelocs): Use new GLINK_ENTRY_SIZE.
-	(ppc_elf_size_dynamic_sections): Likewise.  Size branch table
-	by PLT reloc count.
-	(write_glink_stub): Handle __tls_get_addr_opt stub.
-	Pad out to size given by GLINK_ENTRY_SIZE.
-	(ppc_elf_relocate_section): Adjust write_glink_stub call.
-	(ppc_elf_finish_dynamic_symbol): Likewise.
-	(ppc_elf_finish_dynamic_sections): Write PLTresolve without using
-	insn array since so many need rewriting.
-	* elf32-ppc.h (struct ppc_elf_params): Add plt_stub_align.
-	* elf64-ppc.c (GLINK_PLTRESOLVE_SIZE): Rename from
-	GLINK_CALL_STUB_SIZE.  Add htab param and evaluate to size without
-	nops.  Adjust all uses.
-	(ppc64_elf_get_synthetic_symtab): Don't use GLINK_CALL_STUB_SIZE
-	in glink_vma calculation.
-	(struct ppc_link_hash_table): Add global_entry section pointer.
-	(create_linkage_sections): Create separate section for global
-	entry stubs.
-	(PPC_LO, PPC_HI, PPC_HA): Move earlier.
-	(size_global_entry_stubs): Handle sizing for aligned stubs.
-	(ppc64_elf_size_dynamic_sections): Handle global_entry alloc,
-	and don't stash end of glink branch table in rawsize.
-	(ppc_build_one_stub): Rewrite stub size calculations.
-	(build_global_entry_stubs): Use new section.
-	(ppc64_elf_build_stubs): Don't pad __glink_PLTresolve with nops.
-	Build lazy link stubs out to end of section.  Build global entry
-	stubs in new section.
-
-2018-01-17  Nick Clifton  <nickc@redhat.com>
-
-	* po/ru.po: Updated Russian translation.
-	* po/uk/po: Updated Ukranian translation.
-
-2018-01-15  Nick Clifton  <nickc@redhat.com>
-
+	* po/pt.po: Updated Portuguese translation.
 	* po/uk.po: Updated Ukranian translation.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2019-01-19  Nick Clifton  <nickc@redhat.com>
 
-	* version.m4 (BFD_VERSION): Change to 2.30.0.
+	* version.m4: Reset to 2.31.90
 	* configure: Regenerate.
 	* po/bfd.pot: Regenerate.
 
-2018-01-13  Nick Clifton  <nickc@redhat.com>
+2018-06-24  Nick Clifton  <nickc@redhat.com>
 
-	2.30 branch created.
+	2.32 branch created.
 
-2018-01-12  Jens Widell  <jl@opera.com>
+2019-01-16  Kito Cheng  <kito@andestech.com>
 
-	* elf.c (setup_group): Optimize search for group by remembering
-	last found group and restarting search at that index.
-	* elf-bfd.h (struct elf_obj_tdata): Add group_search_offset field.
+	* elf-attrs.c (vendor_obj_attr_size): Return 0 if size is 0 even
+	for OBJ_ATTR_PROC.
 
-2018-01-12  Gunther Nikl  <gnikl@users.sourceforge.net>
+2019-01-16  Kito Cheng  <kito@andestech.com>
+	    Nelson Chu  <nelson@andestech.com>
 
-	* aoutx.h (aout_link_check_ar_symbols): Remove default and handle
-	bfd_link_common_skip_none in switch.
+	* elfnn-riscv.c (in_subsets): New.
+	(out_subsets): Likewise.
+	(merged_subsets): Likewise.
+	(riscv_std_ext_p): Likewise.
+	(riscv_non_std_ext_p): Likewise.
+	(riscv_std_sv_ext_p): Likewise.
+	(riscv_non_std_sv_ext_p): Likewise.
+	(riscv_version_mismatch): Likewise.
+	(riscv_i_or_e_p): Likewise.
+	(riscv_merge_std_ext): Likewise.
+	(riscv_merge_non_std_and_sv_ext): Likewise.
+	(riscv_merge_arch_attr_info): Likewise.
+	(riscv_merge_attributes): Likewise.
+	(_bfd_riscv_elf_merge_private_bfd_data): Merge attribute.
 
-2018-01-12  Alan Modra  <amodra@gmail.com>
+	* elfnn-riscv.c (riscv_elf_obj_attrs_arg_type): New.
+	(elf_backend_obj_attrs_vendor): Define.
+	(elf_backend_obj_attrs_section_type): Likewise.
+	(elf_backend_obj_attrs_section): Likewise.
+	(elf_backend_obj_attrs_arg_type): Define as
+	riscv_elf_obj_attrs_arg_type.
+	* elfxx-riscv.c (riscv_estimate_digit): New.
+	(riscv_estimate_arch_strlen1): Likewise.
+	(riscv_estimate_arch_strlen): Likewise.
+	(riscv_arch_str1): Likewise.
+	(riscv_arch_str): Likewise.
+	* elfxx-riscv.h (riscv_arch_str): Declare.
 
-	PR ld/22649
-	* elf64-ppc.c (ppc64_elf_gc_mark_dynamic_ref): Ignore dynamic
-	references on forced local symbols.
+2019-01-14  John Darrington <john@darrington.wattle.id.au>
 
-2018-01-12  Vlad Ivanov  <vlad@ivanov.email>
+	* bfd-in2.h [BFD_RELOC_S12Z_OPR]: New reloc.
+	* libbfd.h: regen.
+	* elf32-s12z.c (eld_s12z_howto_table): R_S12Z_OPR takes non zero
+	source field.  (md_apply_fix): Apply final fix
+	to BFD_RELOC_S12Z_OPR.
+	* reloc.c[BFD_RELOC_S12Z_OPR]: New reloc.
 
-	* elfxx-mips.c (_bfd_mips_elf_final_link): Notify user when
-	.reginfo section has wrong size.
+2019-01-14  Maamoun Tarsha  <maamountk@hotmail.com>
 
-2018-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+	PR 20113
+	* elf32-s390.c (allocate_dynrelocs): Update comment.
 
-	PR ld/22393
-	* elf.c (_bfd_elf_map_sections_to_segments): When generating
-	separate code and read-only data LOAD segments, create a new
-	LOAD segment if the previous section contains text and the
-	current section doesn't or vice versa.  Don't put a writable
-	section in a read-only segment if there is a RELRO segment.
+2019-01-09  Andrew Paprocki  <andrew@ishiboo.com>
 
-2018-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+	* warning.m4: Adjust egrep pattern for non-GNU compilers.
+	* configure: Regenerate.
 
-	PR ld/22649
-	* elflink.c (bfd_elf_gc_mark_dynamic_ref_symbol): Ignore dynamic
-	references on forced local symbols.
+2019-01-08  Alan Modra  <amodra@gmail.com>
 
-2018-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+	PR 23699
+	PR 24065
+	* ihex.c (ihex_write_object_contents): Properly check 32-bit
+	address range.
 
-	PR ld/22677
-	* elflink.c (bfd_elf_gc_sections): Keep all PREINIT_ARRAY,
-	INIT_ARRAY as well as FINI_ARRAY sections for ld -r --gc-section.
+2019-01-05  Yoshinori Sato <ysato@users.sourceforge.jp>
 
-2017-09-27  Kuan-Lin Chen  <kuanlinchentw@gmail.com>
+	* bfd/archures.c: Add bfd_mach_rx_v2 and bfd_mach_rx_v3.
+	* bfd/bfd-in2.h: Regenerate.
+	* bfd/cpu-rx.c (arch_info_struct): Add RXv2 and RXv3 entry.
+	* bfd/elf32-rx.c (elf32_rx_machine): Add RXv2 and RXv3 support.
 
-	PR 22662
-	* elf32-nds32.c (nds32_elf_relax_loadstore): Fix a typographical error.
+2019-01-04  Lifang Xia  <lifang_xia@c-sky.com>
 
-2018-01-03  John Baldwin  <jhb@FreeBSD.org>
+	* config.bfd (csky-*-elf* | csky-*-linux*): Modify the csky
+	default target, little endian target is more suitable.
 
-	* elf.c (elfcore_grok_freebsd_note): Handle
-	NT_FREEBSD_PROCSTAT_PROC, NT_FREEBSD_PROCSTAT_FILES, and
-	NT_FREEBSD_PROCSTAT_VMMAP.
+2019-01-04  Alan Modra  <amodra@gmail.com>
 
-2018-01-03  Alan Modra  <amodra@gmail.com>
+	PR 24061
+	PR 21786
+	* coff-rs6000.c (GET_VALUE_IN_FIELD): Add base parameter and
+	adjust all callers.
+	(EQ_VALUE_IN_FIELD): Likewise.
+	* coff64-rs6000.c (GET_VALUE_IN_FIELD): Likewise.
+
+2019-01-01  Alan Modra  <amodra@gmail.com>
 
 	Update year range in copyright notice of all files.
 
-For older changes see ChangeLog-2017
+For older changes see ChangeLog-2018
 
-Copyright (C) 2018 Free Software Foundation, Inc.
+Copyright (C) 2019 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

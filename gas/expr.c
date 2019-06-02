@@ -1,5 +1,5 @@
 /* expr.c -operands, expressions-
-   Copyright (C) 1987-2018 Free Software Foundation, Inc.
+   Copyright (C) 1987-2019 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1302,48 +1302,6 @@ operand (expressionS *expressionP, enum expr_mode mode)
 	    }
 #endif
 
-#ifdef TC_I960
-	  /* The MRI i960 assembler permits
-	         lda sizeof code,g13
-	     FIXME: This should use md_parse_name.  */
-	  if (flag_mri
-	      && (strcasecmp (name, "sizeof") == 0
-		  || strcasecmp (name, "startof") == 0))
-	    {
-	      int start;
-	      char *buf;
-
-	      start = (name[1] == 't'
-		       || name[1] == 'T');
-
-	      *input_line_pointer = c;
-	      SKIP_WHITESPACE_AFTER_NAME ();
-
-	      c = get_symbol_name (& name);
-	      if (! *name)
-		{
-		  as_bad (_("expected symbol name"));
-		  expressionP->X_op = O_absent;
-		  (void) restore_line_pointer (c);
-		  ignore_rest_of_line ();
-		  break;
-		}
-
-	      buf = concat (start ? ".startof." : ".sizeof.", name,
-			    (char *) NULL);
-	      symbolP = symbol_make (buf);
-	      free (buf);
-
-	      expressionP->X_op = O_symbol;
-	      expressionP->X_add_symbol = symbolP;
-	      expressionP->X_add_number = 0;
-
-	      *input_line_pointer = c;
-	      SKIP_WHITESPACE_AFTER_NAME ();
-	      break;
-	    }
-#endif
-
 	  symbolP = symbol_find_or_make (name);
 
 	  /* If we have an absolute symbol or a reg, then we know its
@@ -1879,6 +1837,13 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 	  right.X_add_symbol = NULL;
 	  right.X_op_symbol = NULL;
 	}
+
+      if (mode == expr_defer
+	  && ((resultP->X_add_symbol != NULL
+	       && S_IS_FORWARD_REF (resultP->X_add_symbol))
+	      || (right.X_add_symbol != NULL
+		  && S_IS_FORWARD_REF (right.X_add_symbol))))
+	goto general;
 
       /* Optimize common cases.  */
 #ifdef md_optimize_expr
